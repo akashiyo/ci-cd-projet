@@ -12,29 +12,29 @@ pipeline {
         SONAR_SERVER_ID = "SonarQube" // Le nom configuré dans Global Tool Configuration
     }
 
+    tools {
+        nodejs 'node'
+    }
+
     stages {
         stage('Lint & Test') {
             parallel {
                 stage('Backend Quality') {
                     steps {
                         dir('backend') {
-                            withNPM(npmrcConfig:'v18.20.8') {
-                                // On utilise un container node pour être sûr de l'environnement
-                                sh 'npm install'
-                                sh 'npm run lint'
-                                sh 'npm test -- --coverage'
-                            }
+                            // On utilise un container node pour être sûr de l'environnement
+                            sh 'npm install'
+                            sh 'npm run lint'
+                            sh 'npm test -- --coverage'
                         }
                     }
                 }
                 stage('Frontend Quality') {
                     steps {
                         dir('frontend') {
-                            withNPM(npmrcConfig:'v18.20.8') {
-                                sh 'npm install'
-                                sh 'npm run lint'
-                                sh 'npm test -- --coverage --watchAll=false'
-                            }
+                            sh 'npm install'
+                            sh 'npm run lint'
+                            sh 'npm test -- --coverage --watchAll=false'
                         }
                     }
                 }
