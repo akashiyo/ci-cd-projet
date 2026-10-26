@@ -14,11 +14,11 @@ pipeline {
 
     stages {
         stage('Lint & Test') {
-            withNPM(npmrcConfig:'v18.20.8') {
-                parallel {
-                    stage('Backend Quality') {
-                        steps {
-                            dir('backend') {
+            parallel {
+                stage('Backend Quality') {
+                    steps {
+                        dir('backend') {
+                            withNPM(npmrcConfig:'v18.20.8') {
                                 // On utilise un container node pour être sûr de l'environnement
                                 sh 'npm install'
                                 sh 'npm run lint'
@@ -26,9 +26,11 @@ pipeline {
                             }
                         }
                     }
-                    stage('Frontend Quality') {
-                        steps {
-                            dir('frontend') {
+                }
+                stage('Frontend Quality') {
+                    steps {
+                        dir('frontend') {
+                            withNPM(npmrcConfig:'v18.20.8') {
                                 sh 'npm install'
                                 sh 'npm run lint'
                                 sh 'npm test -- --coverage --watchAll=false'
