@@ -1,13 +1,13 @@
-const express = require('express');
-const { Pool } = require('pg');
-const cors = require('cors');
+const express = require("express");
+const { Pool } = require("pg");
+const cors = require("cors");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@db:5432/bookdb'
+  connectionString: process.env.DATABASE_URL || "postgresql://postgres:postgres@db:5432/bookdb"
 });
 
 // Database Initialization
@@ -27,23 +27,23 @@ const initDb = async () => {
   `);
 };
 
-initDb().catch(err => console.error('DB Init Error:', err));
+initDb().catch(err => console.error("DB Init Error:", err));
 
 // Routes
-app.get('/books', async (req, res) => {
+app.get("/books", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM books');
+    const result = await pool.query("SELECT * FROM books");
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post('/books', async (req, res) => {
+app.post("/books", async (req, res) => {
   const { title, author, description } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO books (title, author, description) VALUES ($1, $2, $3) RETURNING *',
+      "INSERT INTO books (title, author, description) VALUES ($1, $2, $3) RETURNING *",
       [title, author, description]
     );
     res.status(201).json(result.rows[0]);
@@ -52,13 +52,13 @@ app.post('/books', async (req, res) => {
   }
 });
 
-app.get('/books/:id', async (req, res) => {
+app.get("/books/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const bookResult = await pool.query('SELECT * FROM books WHERE id = $1', [id]);
-    if (bookResult.rows.length === 0) return res.status(404).json({ error: 'Book not found' });
+    const bookResult = await pool.query("SELECT * FROM books WHERE id = $1", [id]);
+    if (bookResult.rows.length === 0) return res.status(404).json({ error: "Book not found" });
 
-    const commentsResult = await pool.query('SELECT * FROM comments WHERE book_id = $1', [id]);
+    const commentsResult = await pool.query("SELECT * FROM comments WHERE book_id = $1", [id]);
     res.json({
       book: bookResult.rows[0],
       comments: commentsResult.rows
@@ -68,12 +68,12 @@ app.get('/books/:id', async (req, res) => {
   }
 });
 
-app.post('/books/:id/comments', async (req, res) => {
+app.post("/books/:id/comments", async (req, res) => {
   const { id } = req.params;
   const { text } = req.body;
   try {
     const result = await pool.query(
-      'INSERT INTO comments (book_id, text) VALUES ($1, $2) RETURNING *',
+      "INSERT INTO comments (book_id, text) VALUES ($1, $2) RETURNING *",
       [id, text]
     );
     res.status(201).json(result.rows[0]);
