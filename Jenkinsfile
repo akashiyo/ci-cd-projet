@@ -14,23 +14,25 @@ pipeline {
 
     stages {
         stage('Lint & Test') {
-            parallel {
-                stage('Backend Quality') {
-                    steps {
-                        dir('backend') {
-                            // On utilise un container node pour être sûr de l'environnement
-                            sh 'npm install'
-                            sh 'npm run lint'
-                            sh 'npm test -- --coverage'
+            withNPM(npmrcConfig:'v18.20.8') {
+                parallel {
+                    stage('Backend Quality') {
+                        steps {
+                            dir('backend') {
+                                // On utilise un container node pour être sûr de l'environnement
+                                sh 'npm install'
+                                sh 'npm run lint'
+                                sh 'npm test -- --coverage'
+                            }
                         }
                     }
-                }
-                stage('Frontend Quality') {
-                    steps {
-                        dir('frontend') {
-                            sh 'npm install'
-                            sh 'npm run lint'
-                            sh 'npm test -- --coverage --watchAll=false'
+                    stage('Frontend Quality') {
+                        steps {
+                            dir('frontend') {
+                                sh 'npm install'
+                                sh 'npm run lint'
+                                sh 'npm test -- --coverage --watchAll=false'
+                            }
                         }
                     }
                 }
