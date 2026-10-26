@@ -43,12 +43,16 @@ pipeline {
 
         stage('Static Analysis') {
             steps {
-                // Utilisation du scanner SonarQube configuré dans Jenkins
-                withSonarQubeEnv("${SONAR_SERVER_ID}") {
-                    sh "sonar-scanner \
-                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
-                        -Dsonar.sources=. \
-                        -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info"
+                script {
+                    // On récupère le chemin vers l'outil configuré dans Tools
+                    def scannerHome = tool 'sonar-scanner'
+
+                    withSonarQubeEnv("${SONAR_SERVER_ID}") {
+                        sh "${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                            -Dsonar.sources=. \
+                            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info"
+                    }
                 }
             }
         }
