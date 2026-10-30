@@ -49,7 +49,7 @@ pipeline {
 
         stage('Integration Tests') {
             steps {
-                sh './tests/integration.sh'
+                sh 'bash ./tests/integration.sh'
             }
         }
 
