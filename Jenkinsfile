@@ -42,6 +42,22 @@ pipeline {
                         }
                     }
                 }
+                stage('Commit Messages') {
+                    steps {
+                        // Installe l'outillage de release et verifie les commits
+                        // depuis le dernier tag (ou le dernier commit au premier build).
+                        sh '''
+                            npm ci --prefer-offline --no-audit --no-fund
+                            git fetch --tags --force origin >/dev/null 2>&1 || true
+                            if last_tag=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null); then
+                                from=$last_tag
+                            else
+                                from=$(git rev-parse HEAD~1 2>/dev/null || git hash-object -t tree /dev/null)
+                            fi
+                            npx commitlint --from "$from" --to HEAD --verbose
+                        '''
+                    }
+                }
             }
         }
 
@@ -69,6 +85,7 @@ pipeline {
                         sh "${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                             -Dsonar.sources=. \
+                            -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/reports/**,frontend/build/**,.scannerwork/** \
                             -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info"
                     }
                 }
@@ -219,6 +236,53 @@ pipeline {
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         sh 'bash ./scripts/deploy-production.sh'
                     }
+                }
+            }
+        }
+
+        stage('Release') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'main' ||
+                    env.GIT_BRANCH == 'origin/main' ||
+                    env.GIT_BRANCH == 'main'
+                }
+            }
+            steps {
+                script {
+                    docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
+                        withCredentials([string(credentialsId: 'github-token', variable: 'GH_TOKEN')]) {
+                            sh '''
+                                export CI=true
+                                export GIT_TERMINAL_PROMPT=0
+
+                                git config user.name "jenkins-ci"
+                                git config user.email "jenkins-ci@users.noreply.github.com"
+                                git config --local credential.helper '!f() { echo username=x-access-token; echo "password=${GH_TOKEN}"; }; f'
+
+                                git fetch --tags --force origin
+                                git fetch --unshallow origin >/dev/null 2>&1 || true
+                                git checkout -B main
+                                git branch --set-upstream-to=origin/main main || true
+
+                                npx semantic-release
+
+                                if [ -f release-version.txt ]; then
+                                    version=$(cat release-version.txt)
+                                    for pair in "backend:$IMAGE_BACKEND" "frontend:$IMAGE_FRONTEND" "proxy:$IMAGE_PROXY"; do
+                                        kind=${pair%%:*}
+                                        image=${pair#*:}
+                                        docker tag "$image" "${REGISTRY}/book-catalog-${kind}:${version}"
+                                        docker push "${REGISTRY}/book-catalog-${kind}:${version}"
+                                    done
+                                    echo "Release ${version} associee aux images Nexus."
+                                else
+                                    echo "Aucune release creee pour ce build."
+                                fi
+                            '''
+                        }
+                    }
+                    archiveArtifacts artifacts: 'CHANGELOG.md,release-version.txt', allowEmptyArchive: true, fingerprint: true
                 }
             }
         }

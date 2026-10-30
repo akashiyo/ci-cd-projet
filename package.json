@@ -1,0 +1,30 @@
+{
+  "name": "book-catalog-ci-cd",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Book catalog application and CI/CD toolchain",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/akashiyo/ci-cd-projet.git"
+  },
+  "scripts": {
+    "commitlint": "commitlint --from HEAD~1 --to HEAD --verbose",
+    "release": "semantic-release",
+    "release:dry-run": "semantic-release --dry-run --no-ci"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.6.1",
+    "@commitlint/config-conventional": "^18.6.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^10.0.4",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/npm": "^10.0.6",
+    "@semantic-release/release-notes-generator": "^11.0.7",
+    "semantic-release": "^21.1.2"
+  }
+}
