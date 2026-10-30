@@ -1,6 +1,10 @@
 pipeline {
     agent { label 'docker-agent' }
 
+    options {
+        disableConcurrentBuilds()
+    }
+
     environment {
         // Configuration Nexus / Docker Registry
         REGISTRY = "localhost:8082" // Port Docker de Nexus publié sur l'hôte

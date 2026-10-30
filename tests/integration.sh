@@ -5,10 +5,13 @@ set -euo pipefail
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$script_dir/.."
 
+project_name="book-catalog-integration-${BUILD_NUMBER:-local}"
+export JENKINS_SECRET="${JENKINS_SECRET:-integration-placeholder}"
+
 if docker compose version >/dev/null 2>&1; then
-  compose=(docker compose --env-file /dev/null --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
+  compose=(docker compose --env-file /dev/null --project-name "$project_name" -f docker-compose.yml -f tests/docker-compose.integration.yml)
 else
-  compose=(docker compose --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
+  compose=(docker-compose --project-name "$project_name" -f docker-compose.yml -f tests/docker-compose.integration.yml)
 fi
 
 cleanup() {
@@ -17,7 +20,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-BACKEND_PORT=5001 "${compose[@]}" up -d --build db backend
+BACKEND_PORT=5101 "${compose[@]}" up -d --build db backend
 
 for attempt in $(seq 1 30); do
   if "${compose[@]}" run --rm --no-deps curl \

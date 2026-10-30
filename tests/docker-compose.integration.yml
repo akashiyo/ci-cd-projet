@@ -1,9 +1,9 @@
 services:
   db:
-    container_name: book-db-integration
+    container_name: !reset null
 
   backend:
-    container_name: book-backend-integration
+    container_name: !reset null
 
   curl:
     image: curlimages/curl:8.10.1
