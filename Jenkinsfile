@@ -174,8 +174,8 @@ pipeline {
                 script {
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         // Compose utilise les mêmes images taguées que celles publiées ci-dessus.
-                        sh 'docker compose pull'
-                        sh 'docker compose up -d --no-build'
+                        sh 'docker compose pull backend frontend'
+                        sh 'docker compose up -d --no-build --no-deps backend frontend'
                     }
                 }
             }
