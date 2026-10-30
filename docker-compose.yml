@@ -57,7 +57,7 @@ services:
   # --- APPLICATION ---
   db:
     image: postgres:15-alpine
-    container_name: bookdb
+    container_name: book-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
