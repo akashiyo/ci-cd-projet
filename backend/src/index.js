@@ -30,9 +30,33 @@ const initDb = async () => {
 initDb().catch(err => console.error("DB Init Error:", err));
 
 // Routes
+app.get("/api/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.status(200).json({ status: "ok", database: "ok" });
+  } catch (err) {
+    res.status(503).json({ status: "error", database: "unavailable" });
+  }
+});
+
 app.get("/books", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM books");
+    const { search, author } = req.query;
+    const conditions = [];
+    const values = [];
+
+    if (search) {
+      values.push(`%${search}%`);
+      conditions.push(`(title ILIKE $${values.length} OR author ILIKE $${values.length})`);
+    }
+
+    if (author) {
+      values.push(author);
+      conditions.push(`author = $${values.length}`);
+    }
+
+    const whereClause = conditions.length > 0 ? ` WHERE ${conditions.join(" AND ")}` : "";
+    const result = await pool.query(`SELECT * FROM books${whereClause}`, values);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

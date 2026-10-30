@@ -5,6 +5,9 @@ const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function App() {
   const [books, setBooks] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [authorFilter, setAuthorFilter] = useState("");
+  const [error, setError] = useState("");
   const [newBook, setNewBook] = useState({ title: "", author: "", description: "" });
   const [selectedBook, setSelectedBook] = useState(null);
   const [comment, setComment] = useState("");
@@ -18,10 +21,22 @@ function App() {
     try {
       const res = await axios.get(`${API_URL}/books`);
       setBooks(res.data);
+      setError("");
     } catch (e) {
+      setError("Unable to load books.");
       console.error("Error fetching books", e);
     }
   };
+
+  const authors = [...new Set(books.map(book => book.author))].sort();
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredBooks = books.filter(book => {
+    const matchesSearch = !normalizedSearch ||
+      book.title.toLowerCase().includes(normalizedSearch) ||
+      book.author.toLowerCase().includes(normalizedSearch);
+    const matchesAuthor = !authorFilter || book.author === authorFilter;
+    return matchesSearch && matchesAuthor;
+  });
 
   const addBook = async (e) => {
     e.preventDefault();
@@ -82,9 +97,12 @@ function App() {
       <section>
         <h2>Add a New Book</h2>
         <form onSubmit={addBook}>
-          <input placeholder="Title" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} required />
-          <input placeholder="Author" value={newBook.author} onChange={e => setNewBook({...newBook, author: e.target.value})} required />
-          <input placeholder="Description" value={newBook.description} onChange={e => setNewBook({...newBook, description: e.target.value})} />
+          <label htmlFor="book-title">Title</label>
+          <input id="book-title" placeholder="Title" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} required />
+          <label htmlFor="book-author">Author</label>
+          <input id="book-author" placeholder="Author" value={newBook.author} onChange={e => setNewBook({...newBook, author: e.target.value})} required />
+          <label htmlFor="book-description">Description</label>
+          <input id="book-description" placeholder="Description" value={newBook.description} onChange={e => setNewBook({...newBook, description: e.target.value})} />
           <button type="submit">Add Book</button>
         </form>
       </section>
@@ -93,12 +111,28 @@ function App() {
 
       <section>
         <h2>Catalog</h2>
+        <div>
+          <label htmlFor="book-search">Search by title or author</label>
+          <input
+            id="book-search"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search books"
+          />
+          <label htmlFor="author-filter">Filter by author</label>
+          <select id="author-filter" value={authorFilter} onChange={e => setAuthorFilter(e.target.value)}>
+            <option value="">All authors</option>
+            {authors.map(author => <option key={author} value={author}>{author}</option>)}
+          </select>
+        </div>
+        {error && <p role="alert">{error}</p>}
         <div style={{ display: "grid", gap: "10px" }}>
-          {books.map(book => (
+          {filteredBooks.map(book => (
             <div key={book.id} style={{ border: "1px solid #ccc", padding: "10px", borderRadius: "5px", cursor: "pointer" }} onClick={() => viewBook(book.id)}>
               <strong>{book.title}</strong> - {book.author}
             </div>
           ))}
+          {!error && filteredBooks.length === 0 && <p role="status">No books match your search.</p>}
         </div>
       </section>
     </div>

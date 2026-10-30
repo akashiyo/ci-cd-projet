@@ -23,6 +23,10 @@ beforeAll(async () => {
   await pool.query('CREATE TABLE IF NOT EXISTS comments (id SERIAL PRIMARY KEY, book_id INTEGER REFERENCES books(id), text TEXT)');
 });
 
+beforeEach(() => {
+  pool.query.mockReset();
+});
+
 afterAll(async () => {
   await pool.end();
 });
@@ -47,5 +51,38 @@ describe('Book API', () => {
     const res = await request(app).get('/books');
     expect(res.statusCode).toEqual(200);
     expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it('should report a healthy database', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [{ '?column?': 1 }] });
+
+    const res = await request(app).get('/api/health');
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.body).toEqual({ status: 'ok', database: 'ok' });
+    expect(pool.query).toHaveBeenCalledWith('SELECT 1');
+  });
+
+  it('should report an unavailable database', async () => {
+    pool.query.mockRejectedValueOnce(new Error('database unavailable'));
+
+    const res = await request(app).get('/api/health');
+
+    expect(res.statusCode).toEqual(503);
+    expect(res.body).toEqual({ status: 'error', database: 'unavailable' });
+  });
+
+  it('should search books by title or author', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/books')
+      .query({ search: 'tolkien', author: 'J.R.R. Tolkien' });
+
+    expect(res.statusCode).toEqual(200);
+    expect(pool.query).toHaveBeenCalledWith(
+      'SELECT * FROM books WHERE (title ILIKE $1 OR author ILIKE $1) AND author = $2',
+      ['%tolkien%', 'J.R.R. Tolkien']
+    );
   });
 });
