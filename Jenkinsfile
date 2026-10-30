@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Configuration Nexus / Docker Registry
-        REGISTRY = "nexus:8082" // Port Docker de Nexus
+        REGISTRY = "localhost:8082" // Port Docker de Nexus publié sur l'hôte
 
         // SonarQube
         SONAR_PROJECT_KEY = "book-catalog-project"
@@ -158,7 +158,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    docker.withRegistry("http://${REGISTRY}") {
+                    docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         // Compose utilise les mêmes images taguées que celles publiées ci-dessus.
                         sh 'docker compose pull'
                         sh 'docker compose up -d --no-build'
