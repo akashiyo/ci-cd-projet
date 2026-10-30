@@ -6,9 +6,9 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd "$script_dir/.."
 
 if docker compose version >/dev/null 2>&1; then
-  compose=(docker compose --env-file /dev/null)
+  compose=(docker compose --env-file /dev/null --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
 else
-  compose=(docker-compose)
+  compose=(docker-compose --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
 fi
 
 cleanup() {
@@ -17,10 +17,10 @@ cleanup() {
 
 trap cleanup EXIT
 
-"${compose[@]}" up -d --build db backend
+BACKEND_PORT=5001 "${compose[@]}" up -d --build db backend
 
 for attempt in $(seq 1 30); do
-  if curl --fail --silent http://localhost:5000/api/health > /tmp/book-catalog-health.json; then
+  if curl --fail --silent http://localhost:5001/api/health > /tmp/book-catalog-health.json; then
     break
   fi
 
@@ -33,5 +33,5 @@ for attempt in $(seq 1 30); do
 done
 
 grep --fixed-strings --quiet '"status":"ok"' /tmp/book-catalog-health.json
-curl --fail --silent http://localhost:5000/books > /tmp/book-catalog-books.json
+curl --fail --silent http://localhost:5001/books > /tmp/book-catalog-books.json
 grep --fixed-strings --quiet '[' /tmp/book-catalog-books.json

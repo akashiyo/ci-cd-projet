@@ -1,0 +1,6 @@
+services:
+  db:
+    container_name: book-db-integration
+
+  backend:
+    container_name: book-backend-integration
