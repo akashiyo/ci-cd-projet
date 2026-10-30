@@ -169,13 +169,25 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Staging') {
             steps {
                 script {
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
-                        // Compose utilise les mêmes images taguées que celles publiées ci-dessus.
-                        sh 'docker compose --project-name ci-cd-projet pull backend frontend'
-                        sh 'docker compose --project-name ci-cd-projet up -d --no-build --no-deps backend frontend'
+                        sh '''
+                            docker compose --project-name ci-cd-projet pull staging-backend staging-frontend
+                            docker compose --project-name ci-cd-projet up -d --no-build --no-deps staging-backend staging-frontend
+
+                            for attempt in $(seq 1 30); do
+                                if docker compose --project-name ci-cd-projet exec -T staging-backend \
+                                    node -e 'const http = require("http"); const req = http.get("http://127.0.0.1:5000/api/health", res => process.exit(res.statusCode === 200 ? 0 : 1)); req.on("error", () => process.exit(1));'; then
+                                    exit 0
+                                fi
+                                sleep 2
+                            done
+
+                            echo "Staging health check failed" >&2
+                            exit 1
+                        '''
                     }
                 }
             }

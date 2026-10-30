@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+const API_URL = window.__APP_CONFIG__?.apiUrl || process.env.REACT_APP_API_URL || "http://localhost:5000";
 
 function App() {
   const [books, setBooks] = useState([]);
