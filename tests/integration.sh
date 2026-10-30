@@ -11,9 +11,6 @@ else
   compose=(docker-compose --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
 fi
 
-  integration_network=book-catalog-integration_default
-  curl_image=curlimages/curl:8.10.1
-
 cleanup() {
   "${compose[@]}" rm --stop --force db backend
 }
@@ -23,7 +20,7 @@ trap cleanup EXIT
 BACKEND_PORT=5001 "${compose[@]}" up -d --build db backend
 
 for attempt in $(seq 1 30); do
-  if docker run --rm --network "$integration_network" "$curl_image" \
+  if "${compose[@]}" run --rm --no-deps curl \
     --fail --silent http://backend:5000/api/health > /tmp/book-catalog-health.json; then
     break
   fi
@@ -37,6 +34,6 @@ for attempt in $(seq 1 30); do
 done
 
 grep --fixed-strings --quiet '"status":"ok"' /tmp/book-catalog-health.json
-docker run --rm --network "$integration_network" "$curl_image" \
+"${compose[@]}" run --rm --no-deps curl \
   --fail --silent http://backend:5000/books > /tmp/book-catalog-books.json
 grep --fixed-strings --quiet '[' /tmp/book-catalog-books.json

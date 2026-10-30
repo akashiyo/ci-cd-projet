@@ -4,3 +4,6 @@ services:
 
   backend:
     container_name: book-backend-integration
+
+  curl:
+    image: curlimages/curl:8.10.1
