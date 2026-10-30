@@ -10,6 +10,7 @@ services:
       - 50000:50000
     volumes:
       - jenkins_home:/var/jenkins_home
+      - ./jenkins/init.groovy.d:/var/jenkins_home/init.groovy.d:ro
       - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
 
@@ -31,8 +32,26 @@ services:
     container_name: nexus
     ports:
       - 8081:8081
+      - 8082:8082
     volumes:
       - nexus_data:/nexus-data
+    restart: unless-stopped
+
+  jenkins-agent:
+    build: ./jenkins-agent
+    container_name: jenkins-agent
+    profiles:
+      - jenkins-agent
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_AGENT_NAME: docker-agent
+      JENKINS_SECRET: ${JENKINS_AGENT_SECRET:-not-configured}
+      JENKINS_WEB_SOCKET: "true"
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - jenkins
     restart: unless-stopped
 
   # --- APPLICATION ---
@@ -49,6 +68,7 @@ services:
 
   backend:
     build: ./backend
+    image: ${IMAGE_BACKEND:-book-catalog-backend:local}
     container_name: book-backend
     ports:
       - 5000:5000
@@ -61,6 +81,7 @@ services:
 
   frontend:
     build: ./frontend
+    image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
     container_name: book-frontend
     ports:
       - 3000:80

@@ -1,11 +1,9 @@
 pipeline {
-    agent any
+    agent { label 'docker-agent' }
 
     environment {
         // Configuration Nexus / Docker Registry
         REGISTRY = "nexus:8082" // Port Docker de Nexus
-        IMAGE_BACKEND = "nexus:8082/book-catalog-backend:latest"
-        IMAGE_FRONTEND = "nexus:8082/book-catalog-frontend:latest"
 
         // SonarQube
         SONAR_PROJECT_KEY = "book-catalog-project"
@@ -25,7 +23,7 @@ pipeline {
                             // On utilise un container node pour être sûr de l'environnement
                             sh 'npm install'
                             sh 'npm run lint'
-                            sh 'npm test -- --coverage'
+                            sh 'npm run test:junit'
                         }
                     }
                 }
@@ -34,10 +32,24 @@ pipeline {
                         dir('frontend') {
                             sh 'npm install'
                             sh 'npm run lint'
-                            sh 'npm test -- --coverage --watchAll=false'
+                            sh 'npm run test:junit'
                         }
                     }
                 }
+            }
+        }
+
+        stage('Publish Test Reports') {
+            steps {
+                junit 'backend/reports/junit.xml'
+                junit 'frontend/reports/junit.xml'
+                archiveArtifacts artifacts: 'backend/coverage/**,frontend/coverage/**', allowEmptyArchive: false
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                sh './tests/integration.sh'
             }
         }
 
@@ -70,6 +82,11 @@ pipeline {
             steps {
                 script {
                     // On s'authentifie sur Nexus
+                    def commit = sh(script: 'git rev-parse --short=12 HEAD', returnStdout: true).trim()
+                    def imageTag = "${env.BUILD_NUMBER}-${commit}"
+                    env.IMAGE_BACKEND = "${REGISTRY}/book-catalog-backend:${imageTag}"
+                    env.IMAGE_FRONTEND = "${REGISTRY}/book-catalog-frontend:${imageTag}"
+
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         // Build et Push Backend
                         def backendImg = docker.build("${IMAGE_BACKEND}", "-f backend/Dockerfile .")
@@ -85,10 +102,13 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                // Ici, on simule le déploiement en demandant au docker-compose
-                // de mettre à jour les containers avec les nouvelles images de Nexus
-                sh 'docker-compose pull'
-                sh 'docker-compose up -d'
+                script {
+                    docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
+                        // Compose utilise les mêmes images taguées que celles publiées ci-dessus.
+                        sh 'docker-compose pull'
+                        sh 'docker-compose up -d --no-build'
+                    }
+                }
             }
         }
     }
