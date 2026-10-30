@@ -8,6 +8,7 @@ pipeline {
         // SonarQube
         SONAR_PROJECT_KEY = "book-catalog-project"
         SONAR_SERVER_ID = "SonarQube" // Le nom configuré dans Global Tool Configuration
+        SONAR_URL = "http://sonarqube:9000"
     }
 
     tools {
@@ -71,9 +72,63 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                // On attend que SonarQube valide le projet avant de continuer
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
+                script {
+                    def reportTask = readFile('.scannerwork/report-task.txt')
+                    def taskId = reportTask.readLines()
+                        .find { it.startsWith('ceTaskId=') }
+                        .split('=', 2)[1]
+
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
+                        withEnv(["SONAR_TASK_ID=${taskId}"]) {
+                            timeout(time: 5, unit: 'MINUTES') {
+                                waitUntil {
+                                    def taskStatus = sh(
+                                        script: '''
+                                            curl --fail --silent --show-error \\
+                                              -u "$SONAR_TOKEN:" \\
+                                              "$SONAR_URL/api/ce/task?id=$SONAR_TASK_ID" \\
+                                            | node -e 'let input=""; process.stdin.on("data", c => input += c).on("end", () => console.log(JSON.parse(input).task.status));'
+                                        ''',
+                                        returnStdout: true
+                                    ).trim()
+
+                                    if (taskStatus in ['FAILED', 'CANCELED']) {
+                                        error("SonarQube analysis failed with status ${taskStatus}")
+                                    }
+
+                                    if (taskStatus != 'SUCCESS') {
+                                        sleep(time: 5, unit: 'SECONDS')
+                                    }
+
+                                    return taskStatus == 'SUCCESS'
+                                }
+                            }
+
+                            def analysisId = sh(
+                                script: '''
+                                    curl --fail --silent --show-error \\
+                                      -u "$SONAR_TOKEN:" \\
+                                      "$SONAR_URL/api/ce/task?id=$SONAR_TASK_ID" \\
+                                    | node -e 'let input=""; process.stdin.on("data", c => input += c).on("end", () => console.log(JSON.parse(input).task.analysisId));'
+                                ''',
+                                returnStdout: true
+                            ).trim()
+
+                            def gateStatus = sh(
+                                script: """
+                                    curl --fail --silent --show-error \\
+                                      -u \"\$SONAR_TOKEN:\" \\
+                                      \"\$SONAR_URL/api/qualitygates/project_status?analysisId=${analysisId}\" \\
+                                    | node -e 'let input=\"\"; process.stdin.on(\"data\", c => input += c).on(\"end\", () => console.log(JSON.parse(input).projectStatus.status));'
+                                """,
+                                returnStdout: true
+                            ).trim()
+
+                            if (gateStatus != 'OK') {
+                                error("SonarQube Quality Gate status: ${gateStatus}")
+                            }
+                        }
+                    }
                 }
             }
         }
