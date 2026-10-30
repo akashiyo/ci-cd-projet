@@ -11,28 +11,57 @@ const pool = new Pool({
 });
 
 // Database Initialization
+// Compose only guarantees container start order, not that PostgreSQL is ready
+// to accept queries, so keep retrying until the schema has been created.
+const DB_INIT_MAX_ATTEMPTS = 30;
+const DB_INIT_RETRY_DELAY_MS = 2000;
+
 const initDb = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS books (
-      id SERIAL PRIMARY KEY,
-      title TEXT NOT NULL,
-      author TEXT NOT NULL,
-      description TEXT
-    );
-    CREATE TABLE IF NOT EXISTS comments (
-      id SERIAL PRIMARY KEY,
-      book_id INTEGER REFERENCES books(id) ON DELETE CASCADE,
-      text TEXT NOT NULL
-    );
-  `);
+  for (let attempt = 1; attempt <= DB_INIT_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS books (
+          id SERIAL PRIMARY KEY,
+          title TEXT NOT NULL,
+          author TEXT NOT NULL,
+          description TEXT
+        );
+        CREATE TABLE IF NOT EXISTS comments (
+          id SERIAL PRIMARY KEY,
+          book_id INTEGER REFERENCES books(id) ON DELETE CASCADE,
+          text TEXT NOT NULL
+        );
+      `);
+      return;
+    } catch (err) {
+      console.error(`DB Init Error (attempt ${attempt}/${DB_INIT_MAX_ATTEMPTS}):`, err.message);
+
+      if (attempt === DB_INIT_MAX_ATTEMPTS) {
+        console.error("DB Init failed after maximum attempts, exiting for a container restart");
+        process.exit(1);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, DB_INIT_RETRY_DELAY_MS));
+    }
+  }
 };
 
-initDb().catch(err => console.error("DB Init Error:", err));
+initDb();
 
 // Routes
 app.get("/api/health", async (req, res) => {
   try {
-    await pool.query("SELECT 1");
+    // Health must reflect schema readiness: the integration tests query
+    // /books as soon as this endpoint returns 200.
+    const result = await pool.query(
+      "SELECT to_regclass('public.books') AS books, to_regclass('public.comments') AS comments"
+    );
+    const schema = result.rows[0] || {};
+
+    if (!schema.books || !schema.comments) {
+      return res.status(503).json({ status: "error", database: "initializing" });
+    }
+
     res.status(200).json({ status: "ok", database: "ok" });
   } catch (err) {
     res.status(503).json({ status: "error", database: "unavailable" });

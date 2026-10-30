@@ -53,14 +53,29 @@ describe('Book API', () => {
     expect(Array.isArray(res.body)).toBe(true);
   });
 
-  it('should report a healthy database', async () => {
-    pool.query.mockResolvedValueOnce({ rows: [{ '?column?': 1 }] });
+  it('should report a healthy database once the schema is ready', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [{ books: 'books', comments: 'comments' }],
+    });
 
     const res = await request(app).get('/api/health');
 
     expect(res.statusCode).toEqual(200);
     expect(res.body).toEqual({ status: 'ok', database: 'ok' });
-    expect(pool.query).toHaveBeenCalledWith('SELECT 1');
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("to_regclass('public.books')")
+    );
+  });
+
+  it('should report the database as initializing while the schema is missing', async () => {
+    pool.query.mockResolvedValueOnce({
+      rows: [{ books: null, comments: null }],
+    });
+
+    const res = await request(app).get('/api/health');
+
+    expect(res.statusCode).toEqual(503);
+    expect(res.body).toEqual({ status: 'error', database: 'initializing' });
   });
 
   it('should report an unavailable database', async () => {
