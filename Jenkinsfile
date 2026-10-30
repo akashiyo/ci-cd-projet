@@ -159,6 +159,7 @@ pipeline {
                     def imageTag = "${env.BUILD_NUMBER}-${commit}"
                     env.IMAGE_BACKEND = "${REGISTRY}/book-catalog-backend:${imageTag}"
                     env.IMAGE_FRONTEND = "${REGISTRY}/book-catalog-frontend:${imageTag}"
+                    env.IMAGE_PROXY = "${REGISTRY}/book-catalog-proxy:${imageTag}"
 
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         // Build et Push Backend
@@ -168,6 +169,10 @@ pipeline {
                         // Build et Push Frontend
                         def frontendImg = docker.build("${IMAGE_FRONTEND}", "-f frontend/Dockerfile .")
                         frontendImg.push()
+
+                        // Build et Push Reverse Proxy (blue/green)
+                        def proxyImg = docker.build("${IMAGE_PROXY}", "-f docker/proxy/Dockerfile .")
+                        proxyImg.push()
                     }
                 }
             }
@@ -192,6 +197,27 @@ pipeline {
                             echo "Staging health check failed" >&2
                             exit 1
                         '''
+                    }
+                }
+            }
+        }
+
+        stage('Manual Approval') {
+            steps {
+                timeout(time: 1, unit: 'HOURS') {
+                    input message: 'Déployer en production ?', submitter: 'admin'
+                }
+            }
+        }
+
+        stage('Deploy Production (Blue/Green)') {
+            steps {
+                script {
+                    // Le script determine l'instance inactive, y deploie les images
+                    // validees en staging, verifie /api/health, bascule le proxy
+                    // et restaure l'ancienne instance en cas d'echec.
+                    docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
+                        sh 'bash ./scripts/deploy-production.sh'
                     }
                 }
             }

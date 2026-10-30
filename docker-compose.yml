@@ -118,6 +118,73 @@ services:
       - staging-backend
     restart: unless-stopped
 
+  # --- PRODUCTION BLUE/GREEN ---
+  # Les deux instances references la meme image publiee (pas de build) :
+  # le pipeline deploie l'artefact valide en staging sur l'instance inactive,
+  # puis bascule le reverse proxy.
+  production-blue-backend:
+    image: ${IMAGE_BACKEND:-book-catalog-backend:local}
+    container_name: book-production-blue-backend
+    ports:
+      - "${PROD_BLUE_BACKEND_PORT:-5010}:5000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/bookdb
+      PORT: 5000
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  production-blue-frontend:
+    image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
+    container_name: book-production-blue-frontend
+    ports:
+      - "${PROD_BLUE_FRONTEND_PORT:-3010}:80"
+    environment:
+      REACT_APP_API_URL: http://localhost:${PRODUCTION_PORT:-8088}
+    depends_on:
+      - production-blue-backend
+    restart: unless-stopped
+
+  production-green-backend:
+    image: ${IMAGE_BACKEND:-book-catalog-backend:local}
+    container_name: book-production-green-backend
+    ports:
+      - "${PROD_GREEN_BACKEND_PORT:-5011}:5000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/bookdb
+      PORT: 5000
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  production-green-frontend:
+    image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
+    container_name: book-production-green-frontend
+    ports:
+      - "${PROD_GREEN_FRONTEND_PORT:-3011}:80"
+    environment:
+      REACT_APP_API_URL: http://localhost:${PRODUCTION_PORT:-8088}
+    depends_on:
+      - production-green-backend
+    restart: unless-stopped
+
+  reverse-proxy:
+    image: ${IMAGE_PROXY:-book-catalog-proxy:local}
+    build:
+      context: .
+      dockerfile: docker/proxy/Dockerfile
+    container_name: book-reverse-proxy
+    ports:
+      - "${PRODUCTION_PORT:-8088}:80"
+    environment:
+      ACTIVE_COLOR: ${ACTIVE_COLOR:-blue}
+      ACTIVE_BACKEND: production-${ACTIVE_COLOR:-blue}-backend
+      ACTIVE_FRONTEND: production-${ACTIVE_COLOR:-blue}-frontend
+    depends_on:
+      - production-${ACTIVE_COLOR:-blue}-backend
+      - production-${ACTIVE_COLOR:-blue}-frontend
+    restart: unless-stopped
+
 volumes:
   jenkins_home:
   sonarqube_data:
