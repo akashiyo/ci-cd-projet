@@ -4,6 +4,7 @@ pipeline {
     environment {
         // Configuration Nexus / Docker Registry
         REGISTRY = "localhost:8082" // Port Docker de Nexus publié sur l'hôte
+        REGISTRY_HEALTHCHECK = "http://nexus:8082/v2/"
 
         // SonarQube
         SONAR_PROJECT_KEY = "book-catalog-project"
@@ -139,13 +140,13 @@ pipeline {
                     sh '''
                         for attempt in $(seq 1 60); do
                             status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-                                "http://${REGISTRY}/v2/" || true)
+                                "${REGISTRY_HEALTHCHECK}" || true)
                             if [ "$status" = "200" ] || [ "$status" = "401" ]; then
                                 exit 0
                             fi
                             sleep 5
                         done
-                        echo "Docker registry is not ready: http://${REGISTRY}/v2/" >&2
+                        echo "Docker registry is not ready: ${REGISTRY_HEALTHCHECK}" >&2
                         exit 1
                     '''
 
