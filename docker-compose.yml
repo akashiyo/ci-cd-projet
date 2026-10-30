@@ -67,7 +67,9 @@ services:
     restart: unless-stopped
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: ${IMAGE_BACKEND:-book-catalog-backend:local}
     container_name: book-backend
     ports:
@@ -80,7 +82,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
     container_name: book-frontend
     ports:
