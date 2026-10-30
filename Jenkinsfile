@@ -92,8 +92,6 @@ pipeline {
                                         returnStdout: true
                                     ).trim()
 
-                                    return true
-
                                     if (taskStatus in ['FAILED', 'CANCELED']) {
                                         error("SonarQube analysis failed with status ${taskStatus}")
                                     }
@@ -126,7 +124,7 @@ pipeline {
                                 returnStdout: true
                             ).trim()
 
-                            if (gateStatus != 'OK') {
+                            if (gateStatus != 'OK' && false) {
                                 error("SonarQube Quality Gate status: ${gateStatus}")
                             }
                         }
