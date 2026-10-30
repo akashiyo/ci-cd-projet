@@ -136,6 +136,19 @@ pipeline {
         stage('Build & Push Images') {
             steps {
                 script {
+                    sh '''
+                        for attempt in $(seq 1 60); do
+                            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+                                "http://${REGISTRY}/v2/" || true)
+                            if [ "$status" = "200" ] || [ "$status" = "401" ]; then
+                                exit 0
+                            fi
+                            sleep 5
+                        done
+                        echo "Docker registry is not ready: http://${REGISTRY}/v2/" >&2
+                        exit 1
+                    '''
+
                     // On s'authentifie sur Nexus
                     def commit = sh(script: 'git rev-parse --short=12 HEAD', returnStdout: true).trim()
                     def imageTag = "${env.BUILD_NUMBER}-${commit}"
