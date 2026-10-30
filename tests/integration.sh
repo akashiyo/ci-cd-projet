@@ -8,7 +8,7 @@ cd "$script_dir/.."
 if docker compose version >/dev/null 2>&1; then
   compose=(docker compose --env-file /dev/null --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
 else
-  compose=(docker-compose --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
+  compose=(docker compose --project-name book-catalog-integration -f docker-compose.yml -f tests/docker-compose.integration.yml)
 fi
 
 cleanup() {
