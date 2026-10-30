@@ -158,7 +158,7 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
+                    docker.withRegistry("http://${REGISTRY}") {
                         // Compose utilise les mêmes images taguées que celles publiées ci-dessus.
                         sh 'docker compose pull'
                         sh 'docker compose up -d --no-build'
