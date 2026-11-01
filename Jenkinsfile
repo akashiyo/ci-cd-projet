@@ -1,3 +1,5 @@
+@Library('book-catalog-shared@v1.0.0') _
+
 pipeline {
     agent { label 'docker-agent' }
 
@@ -215,14 +217,14 @@ pipeline {
                             echo "Staging health check failed" >&2
                             exit 1
                         '''
-                        sh '''
-                            commit_timestamp=$(git show -s --format=%ct HEAD)
-                            timestamp=$(date +%s)
-                            curl --silent --show-error --fail --request POST \
-                                --header 'Content-Type: application/json' \
-                                --data "{\"type\":\"deployment\",\"environment\":\"staging\",\"status\":\"success\",\"timestamp\":${timestamp},\"commit_timestamp\":${commit_timestamp},\"commit\":\"${GIT_COMMIT:-unknown}\",\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
-                                "$DORA_URL" || true
-                        '''
+                        doraEvent(
+                            type: 'deployment',
+                            environment: 'staging',
+                            status: 'success',
+                            commit: env.GIT_COMMIT ?: 'unknown',
+                            build: env.BUILD_NUMBER ?: 'unknown',
+                            commit_timestamp: sh(script: 'git show -s --format=%ct HEAD', returnStdout: true).trim().toLong()
+                        )
                     }
                 }
             }
@@ -245,14 +247,14 @@ pipeline {
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         sh 'bash ./scripts/deploy-production.sh'
                     }
-                    sh '''
-                        commit_timestamp=$(git show -s --format=%ct HEAD)
-                        timestamp=$(date +%s)
-                        curl --silent --show-error --fail --request POST \
-                            --header 'Content-Type: application/json' \
-                            --data "{\"type\":\"deployment\",\"environment\":\"production\",\"status\":\"success\",\"timestamp\":${timestamp},\"commit_timestamp\":${commit_timestamp},\"commit\":\"${GIT_COMMIT:-unknown}\",\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
-                            "$DORA_URL" || true
-                    '''
+                    doraEvent(
+                        type: 'deployment',
+                        environment: 'production',
+                        status: 'success',
+                        commit: env.GIT_COMMIT ?: 'unknown',
+                        build: env.BUILD_NUMBER ?: 'unknown',
+                        commit_timestamp: sh(script: 'git show -s --format=%ct HEAD', returnStdout: true).trim().toLong()
+                    )
                 }
             }
         }
@@ -307,23 +309,11 @@ pipeline {
 
     post {
         success {
-            sh '''
-                timestamp=$(date +%s)
-                curl --silent --show-error --fail --request POST \
-                    --header 'Content-Type: application/json' \
-                    --data "{\"type\":\"pipeline\",\"status\":\"success\",\"timestamp\":${timestamp},\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
-                    "$DORA_URL" || true
-            '''
+            doraEvent(type: 'pipeline', status: 'success', build: env.BUILD_NUMBER ?: 'unknown')
             echo 'Pipeline completed successfully! 🚀'
         }
         failure {
-            sh '''
-                timestamp=$(date +%s)
-                curl --silent --show-error --fail --request POST \
-                    --header 'Content-Type: application/json' \
-                    --data "{\"type\":\"pipeline\",\"status\":\"failure\",\"timestamp\":${timestamp},\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
-                    "$DORA_URL" || true
-            '''
+            doraEvent(type: 'pipeline', status: 'failure', build: env.BUILD_NUMBER ?: 'unknown')
             echo 'Pipeline failed. Check the logs! ❌'
         }
         always {

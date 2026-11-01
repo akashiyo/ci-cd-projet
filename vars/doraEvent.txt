@@ -1,0 +1,5 @@
+Records a non-blocking JSON event in the DORA collector.
+
+Example:
+
+    doraEvent(type: 'deployment', environment: 'production', status: 'success')

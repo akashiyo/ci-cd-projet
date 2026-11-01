@@ -132,12 +132,32 @@ non bloquante : une panne du collecteur ne doit pas faire échouer une livraison
 
 ## Configuration Jenkins à finaliser
 
+La Shared Library `book-catalog-shared` est chargée par le Jenkinsfile avec la
+version `v1.0.0`. Les fonctions communes sont dans `vars/` et la configuration
+initiale Jenkins la déclare depuis le dépôt GitHub. Le tag `v1.0.0` doit être
+créé et poussé avant le premier build utilisant cette bibliothèque.
+
+L'image Jenkins de Compose installe les plugins nécessaires au pipeline, au
+Job DSL, au Multibranch et aux Shared Libraries. Le script
+`jenkins/job-dsl/book-catalog-multibranch.groovy` crée le job
+`book-catalog-multibranch` pour `akashiyo/ci-cd-projet` avec découverte des
+branches et des Pull Requests. Son exécution est documentée dans
+`jenkins/job-dsl/README.md`.
+
+Le webhook GitHub à configurer est :
+
+```text
+http://<jenkins-host>/github-webhook/
+```
+
+La configuration doit utiliser le credential Jenkins `github-token` et le
+credential Docker `docker-registry-creds`; aucun token ne doit être ajouté au
+dépôt.
+
 Les éléments suivants restent dépendants de la configuration de l'instance
 Jenkins et doivent être vérifiés avant le rendu :
 
-- job Multibranch et webhook du dépôt Git ;
 - remontée du statut Jenkins sur les Pull Requests ;
-- Shared Library Jenkins versionnée par tag ;
 - Quality Gate SonarQube bloquante, en retirant le mode temporairement non
   bloquant du Jenkinsfile ;
 - credential `github-token` pour semantic-release ;

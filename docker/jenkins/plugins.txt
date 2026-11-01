@@ -1,0 +1,17 @@
+configuration-as-code
+credentials
+credentials-binding
+git
+github
+github-api
+github-branch-source
+job-dsl
+pipeline-model-definition
+workflow-aggregator
+workflow-multibranch
+workflow-cps
+docker-workflow
+junit
+nodejs
+sonar
+ws-cleanup
