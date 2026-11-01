@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: dora-collector
+    static_configs:
+      - targets: ["dora-collector:9100"]

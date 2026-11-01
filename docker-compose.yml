@@ -54,6 +54,41 @@ services:
       - nexus_data:/nexus-data
     restart: unless-stopped
 
+  dora-collector:
+    image: python:3.12-alpine
+    volumes:
+      - dora_events:/data
+      - ./observability/dora_collector.py:/app/dora_collector.py:ro
+    command: ["python", "/app/dora_collector.py"]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports:
+      - 9090:9090
+    volumes:
+      - prometheus_data:/prometheus
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - dora-collector
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - 3002:3000
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
   # --- APPLICATION ---
   db:
     image: postgres:15-alpine
@@ -191,4 +226,7 @@ volumes:
   sonarqube_extensions:
   sonarqube_logs:
   nexus_data:
+  dora_events:
+  prometheus_data:
+  grafana_data:
   postgres_data:

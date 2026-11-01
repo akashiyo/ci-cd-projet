@@ -1,0 +1,17 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "panels": [
+    {"type": "stat", "title": "Deployments (24h)", "gridPos": {"h": 5, "w": 6, "x": 0, "y": 0}, "targets": [{"expr": "dora_deployments_last_24h", "refId": "A"}]},
+    {"type": "stat", "title": "Change failure rate", "gridPos": {"h": 5, "w": 6, "x": 6, "y": 0}, "fieldConfig": {"defaults": {"unit": "percentunit"}}, "targets": [{"expr": "dora_change_failure_rate", "refId": "A"}]},
+    {"type": "stat", "title": "Latest lead time", "gridPos": {"h": 5, "w": 6, "x": 12, "y": 0}, "fieldConfig": {"defaults": {"unit": "s"}}, "targets": [{"expr": "dora_last_lead_time_seconds", "refId": "A"}]},
+    {"type": "stat", "title": "Latest recovery time", "gridPos": {"h": 5, "w": 6, "x": 18, "y": 0}, "fieldConfig": {"defaults": {"unit": "s"}}, "targets": [{"expr": "dora_last_recovery_time_seconds", "refId": "A"}]},
+    {"type": "timeseries", "title": "Pipeline runs", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 5}, "targets": [{"expr": "dora_pipeline_runs_total", "refId": "A"}, {"expr": "dora_pipeline_failures_total", "refId": "B"}]},
+    {"type": "timeseries", "title": "Successful deployments", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 5}, "targets": [{"expr": "dora_deployments_total", "refId": "A"}]}
+  ],
+  "schemaVersion": 39,
+  "title": "DORA metrics",
+  "time": {"from": "now-30d", "to": "now"},
+  "timezone": "browser",
+  "version": 1
+}

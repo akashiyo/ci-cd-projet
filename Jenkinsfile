@@ -9,6 +9,7 @@ pipeline {
         // Configuration Nexus / Docker Registry
         REGISTRY = "localhost:8082" // Port Docker de Nexus publié sur l'hôte
         REGISTRY_HEALTHCHECK = "http://nexus:8082/v2/"
+        DORA_URL = "http://dora-collector:9100/events"
 
         // SonarQube
         SONAR_PROJECT_KEY = "book-catalog-project"
@@ -214,6 +215,14 @@ pipeline {
                             echo "Staging health check failed" >&2
                             exit 1
                         '''
+                        sh '''
+                            commit_timestamp=$(git show -s --format=%ct HEAD)
+                            timestamp=$(date +%s)
+                            curl --silent --show-error --fail --request POST \
+                                --header 'Content-Type: application/json' \
+                                --data "{\"type\":\"deployment\",\"environment\":\"staging\",\"status\":\"success\",\"timestamp\":${timestamp},\"commit_timestamp\":${commit_timestamp},\"commit\":\"${GIT_COMMIT:-unknown}\",\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
+                                "$DORA_URL" || true
+                        '''
                     }
                 }
             }
@@ -236,6 +245,14 @@ pipeline {
                     docker.withRegistry("http://${REGISTRY}", 'docker-registry-creds') {
                         sh 'bash ./scripts/deploy-production.sh'
                     }
+                    sh '''
+                        commit_timestamp=$(git show -s --format=%ct HEAD)
+                        timestamp=$(date +%s)
+                        curl --silent --show-error --fail --request POST \
+                            --header 'Content-Type: application/json' \
+                            --data "{\"type\":\"deployment\",\"environment\":\"production\",\"status\":\"success\",\"timestamp\":${timestamp},\"commit_timestamp\":${commit_timestamp},\"commit\":\"${GIT_COMMIT:-unknown}\",\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
+                            "$DORA_URL" || true
+                    '''
                 }
             }
         }
@@ -289,14 +306,28 @@ pipeline {
     }
 
     post {
-        always {
-            cleanWs() // Nettoyage de l'espace de travail après le run
-        }
         success {
+            sh '''
+                timestamp=$(date +%s)
+                curl --silent --show-error --fail --request POST \
+                    --header 'Content-Type: application/json' \
+                    --data "{\"type\":\"pipeline\",\"status\":\"success\",\"timestamp\":${timestamp},\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
+                    "$DORA_URL" || true
+            '''
             echo 'Pipeline completed successfully! 🚀'
         }
         failure {
+            sh '''
+                timestamp=$(date +%s)
+                curl --silent --show-error --fail --request POST \
+                    --header 'Content-Type: application/json' \
+                    --data "{\"type\":\"pipeline\",\"status\":\"failure\",\"timestamp\":${timestamp},\"build\":\"${BUILD_NUMBER:-unknown}\"}" \
+                    "$DORA_URL" || true
+            '''
             echo 'Pipeline failed. Check the logs! ❌'
+        }
+        always {
+            cleanWs() // Nettoyage de l'espace de travail après le run
         }
     }
 }
