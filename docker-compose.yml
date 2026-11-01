@@ -124,7 +124,7 @@ services:
     image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
     container_name: book-frontend
     ports:
-      - 3000:80
+      - 3000:8080
     environment:
       REACT_APP_API_URL: http://localhost:5000
     depends_on:
@@ -147,7 +147,7 @@ services:
     image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
     container_name: book-staging-frontend
     ports:
-      - "${STAGING_FRONTEND_PORT:-3001}:80"
+      - "${STAGING_FRONTEND_PORT:-3001}:8080"
     environment:
       REACT_APP_API_URL: http://localhost:${STAGING_BACKEND_PORT:-5001}
     depends_on:
@@ -174,7 +174,7 @@ services:
     image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
     container_name: book-production-blue-frontend
     ports:
-      - "${PROD_BLUE_FRONTEND_PORT:-3010}:80"
+      - "${PROD_BLUE_FRONTEND_PORT:-3010}:8080"
     environment:
       REACT_APP_API_URL: http://localhost:${PRODUCTION_PORT:-8088}
     depends_on:
@@ -197,7 +197,7 @@ services:
     image: ${IMAGE_FRONTEND:-book-catalog-frontend:local}
     container_name: book-production-green-frontend
     ports:
-      - "${PROD_GREEN_FRONTEND_PORT:-3011}:80"
+      - "${PROD_GREEN_FRONTEND_PORT:-3011}:8080"
     environment:
       REACT_APP_API_URL: http://localhost:${PRODUCTION_PORT:-8088}
     depends_on:
@@ -211,7 +211,7 @@ services:
       dockerfile: docker/proxy/Dockerfile
     container_name: book-reverse-proxy
     ports:
-      - "${PRODUCTION_PORT:-8088}:80"
+      - "${PRODUCTION_PORT:-8088}:8080"
     environment:
       ACTIVE_COLOR: ${ACTIVE_COLOR:-blue}
       ACTIVE_BACKEND: production-${ACTIVE_COLOR:-blue}-backend

@@ -14,7 +14,7 @@ function App() {
   const [comments, setComments] = useState([]);
 
   useEffect(() => {
-    fetchBooks();
+    void fetchBooks();
   }, []);
 
   const fetchBooks = async () => {
@@ -28,7 +28,7 @@ function App() {
     }
   };
 
-  const authors = [...new Set(books.map(book => book.author))].sort();
+  const authors = [...new Set(books.map(book => book.author))].sort((first, second) => first.localeCompare(second));
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredBooks = books.filter(book => {
     const matchesSearch = !normalizedSearch ||
@@ -43,7 +43,7 @@ function App() {
     try {
       await axios.post(`${API_URL}/books`, newBook);
       setNewBook({ title: "", author: "", description: "" });
-      fetchBooks();
+      void fetchBooks();
     } catch (e) {
       console.error("Error adding book", e);
     }
@@ -64,7 +64,7 @@ function App() {
     try {
       await axios.post(`${API_URL}/books/${selectedBook.id}/comments`, { text: comment });
       setComment("");
-      viewBook(selectedBook.id);
+      void viewBook(selectedBook.id);
     } catch (e) {
       console.error("Error adding comment", e);
     }
@@ -128,9 +128,9 @@ function App() {
         {error && <p role="alert">{error}</p>}
         <div style={{ display: "grid", gap: "10px" }}>
           {filteredBooks.map(book => (
-            <div key={book.id} style={{ border: "1px solid #ccc", padding: "10px", borderRadius: "5px", cursor: "pointer" }} onClick={() => viewBook(book.id)}>
+            <button type="button" key={book.id} style={{ border: "1px solid #ccc", padding: "10px", borderRadius: "5px", cursor: "pointer", background: "white", textAlign: "left" }} onClick={() => void viewBook(book.id)}>
               <strong>{book.title}</strong> - {book.author}
-            </div>
+            </button>
           ))}
           {!error && filteredBooks.length === 0 && <p role="status">No books match your search.</p>}
         </div>

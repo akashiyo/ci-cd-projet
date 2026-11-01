@@ -100,4 +100,25 @@ describe('Book API', () => {
       ['%tolkien%', 'J.R.R. Tolkien']
     );
   });
+
+  it('should allow configured browser origins', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/books')
+      .set('Origin', 'http://localhost:3000');
+
+    expect(res.statusCode).toEqual(200);
+    expect(res.headers['access-control-allow-origin']).toEqual('http://localhost:3000');
+  });
+
+  it('should reject unknown browser origins', async () => {
+    pool.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/books')
+      .set('Origin', 'https://unexpected.example');
+
+    expect(res.statusCode).toEqual(500);
+  });
 });

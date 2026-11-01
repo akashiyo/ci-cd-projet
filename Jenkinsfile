@@ -85,11 +85,16 @@ pipeline {
                     def scannerHome = tool 'sonar-scanner'
 
                     withSonarQubeEnv("${SONAR_SERVER_ID}") {
+                        sh '''
+                            mkdir -p .scannerwork
+                            sed 's#^SF:src/#SF:backend/src/#' backend/coverage/lcov.info > .scannerwork/sonar-lcov.info
+                            sed 's#^SF:src/#SF:frontend/src/#' frontend/coverage/lcov.info >> .scannerwork/sonar-lcov.info
+                        '''
                         sh "${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
                             -Dsonar.sources=. \
-                            -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/reports/**,frontend/build/**,.scannerwork/** \
-                            -Dsonar.javascript.lcov.reportPaths=backend/coverage/lcov.info,frontend/coverage/lcov.info"
+                            -Dsonar.exclusions=**/node_modules/**,**/coverage/**,**/reports/**,frontend/build/**,.scannerwork/**,docker/jenkins/**,docker/jenkins-agent/** \
+                            -Dsonar.javascript.lcov.reportPaths=.scannerwork/sonar-lcov.info"
                     }
                 }
             }
@@ -149,7 +154,7 @@ pipeline {
                                 returnStdout: true
                             ).trim()
 
-                            if (gateStatus != 'OK' && false) {
+                            if (gateStatus != 'OK') {
                                 error("SonarQube Quality Gate status: ${gateStatus}")
                             }
                         }

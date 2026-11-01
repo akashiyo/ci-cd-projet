@@ -3,7 +3,17 @@ const { Pool } = require("pg");
 const cors = require("cors");
 
 const app = express();
-app.use(cors());
+app.disable("x-powered-by");
+const allowedOrigins = (process.env.CORS_ORIGINS ||
+  "http://localhost:3000,http://localhost:3001,http://localhost:8088").split(",");
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Origin not allowed"));
+  }
+}));
 app.use(express.json());
 
 const pool = new Pool({
@@ -46,7 +56,7 @@ const initDb = async () => {
   }
 };
 
-initDb();
+void initDb();
 
 // Routes
 app.get("/api/health", async (req, res) => {

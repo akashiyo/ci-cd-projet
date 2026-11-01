@@ -2,7 +2,7 @@
 # ${ACTIVE_BACKEND} et ${ACTIVE_FRONTEND} sont substituees par le
 # entrypoint de l'image nginx avant le demarrage.
 server {
-    listen 80;
+    listen 8080;
     server_name _;
 
     # Permet au pipeline de verifier vers quelle instance le proxy route.
@@ -25,7 +25,7 @@ server {
     }
 
     location / {
-        proxy_pass http://${ACTIVE_FRONTEND}:80;
+        proxy_pass http://${ACTIVE_FRONTEND}:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
